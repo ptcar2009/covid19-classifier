@@ -7,6 +7,10 @@ Covid-19 is the main news in 2020, but in Brazil it's been neglected by the gove
 
 The aim of this project is to estimate (in a sort of statistical and non formal manner) what is the rate of undernotification of Covid-19 deaths and hospitalizations midst the notified SARS (SRAG in portuguese) cases.
 
+The problem is a classification problem, where a model will be trained to classify a given entry in the SRAG data between COVID-19 positive and negative sample, given the information contained in the individual file.
+
+The data is mostly tabular data, and I couldn't find any similar research on this specific dataset, but even then, tabular classification is a classic problem that has been tackled in many different forms, from SVMs with kernels to XGBoost and Random Forest and similar ensemble models.
+
 ### Datasets and Inputs
 
 The project will use the [openDataSUS](https://opendatasus.saude.gov.br/) SRAG data from [2020](https://opendatasus.saude.gov.br/dataset/bd-srag-2020) and [2019](https://opendatasus.saude.gov.br/dataset/bd-srag-2019). Both of the datasets are CSV files, for which the column data is described in the [dictionary files](./dictionary_files).
@@ -28,4 +32,4 @@ As for the benchmark model, I didn't really find any other projects that attempt
 
 The design will be based on two main approaches. The first approach is an analysis driven approach, on which the data will be clustered and these clusters will be compared between cases that were and weren't diagnosed with Covid-19.
 
-The second approach will be a binary classifier driven approach, where a model will be trained with 2019's data as negative and 2020's data as positive and test data. The data will have two different sets of test files, one for 2019, on which I'll test the model for precision and recall, and one for 2020, on which I'll test for how much the precision drops, and, with that, estimate the ammount of unreported cases in the data.  
+The second approach will be a binary classifier driven approach, where a model will be trained with 2019's data as negative and 2020's data as positive and test data. The data will have two different sets of test files, one for 2019, on which I'll test the model for precision and recall, and one for 2020, on which I'll test for how much the precision drops, and, with that, estimate the amount of unreported cases in the data.  
