@@ -5,11 +5,7 @@ This project will attempt to make a classifier for under reported cases of Covid
 
 Covid-19 is the main news in 2020, but in Brazil it's been neglected by the government and has not been notified nearly enough, due to lack of tests and public investiment in research and medical support.
 
-The aim of this project is to estimate (in a sort of statistical and non formal manner) what is the rate of undernotification of Covid-19 deaths and hospitalizations midst the notified SARS (SRAG in portuguese) cases.
-
-The problem is a classification problem, where a model will be trained to classify a given entry in the SRAG data between COVID-19 positive and negative sample, given the information contained in the individual file.
-
-The data is mostly tabular data, and I couldn't find any similar research on this specific dataset, but even then, tabular classification is a classic problem that has been tackled in many different forms, from SVMs with kernels to XGBoost and Random Forest and similar ensemble models.
+The problem is a classification problem, where a model will be trained to classify a given entry in the SRAG data between COVID-19 positive and negative sample, given the information contained in the individual file. 
 
 ### Datasets and Inputs
 
@@ -17,19 +13,35 @@ The project will use the [openDataSUS](https://opendatasus.saude.gov.br/) SRAG d
 
 The data is pretty organized and is described in a tabular manner, which makes it easier to input and decode. The data is also stored in AWS, perfectly fitting for downloading from SageMaker.
 
+The data has 72 obligatory columns, but has 134 columns in total, some of which have it's data's existence determined by the value of other columns (like the age of the subject of the given row, etc).
+
+Each row represents a single registered case of SRAG, with information regarding from the symptoms of the case to the district and location on which the case was reported and registered. 
+
+There's a column representing the final diagnostic of the case, where there are 5 categories, two of them being not identified and COVID-19 positive cases. Those are the two main categories on which I'll be focusing, considering they represent most of the data (almost 90% considering 2019 and 2020). The aim will be to be able to identify if the cases are positive for COVID-19 or negative, considering the symptoms of patients registered before September 2019 which are classified as non identified and all patients which are identified as COVID-19 positive.
+
+Using the data in this manner makes the lack of reliability in the 'not identified' data from 2020 make less of an impact in the precision for negative cases, considering that the disease was not around in 2019. 
+
 ### Solution Statement and Evaluation Metrics
 
-The aim of the project is to create a model that can identify non-reported Covid-19 data from SRAG data. This data is not labelled (since it's not been identified), so the evaluation will be split into 2 parts.
+The solution is to have a working classification model for COVID-19 cases reported midst SRAG not identified cases in Brazil's SRAG database. The classifier will be evaluated considering it's training, that is, it'll be evaluated using the 2019's data as negative samples and 2020's data as positive ones.
 
-- recall on identifying Covid-19 confirmed data.
-- precision on 2019's data
+The model will be evaluated using the `F1 score`, and this evaluation will be compared with the XGBoost's model accuracy. 
 
-The idea behind these metrics is that if the model has high recall on 2020's data, it identifies Covid-19 cases easily, and if it has high precision on 2019's data, it means that the number of actual false positives is low.
 
-As for the benchmark model, I didn't really find any other projects that attempt on doing what this is doing.
+### Benchmark models
+The data is mostly tabular data, and I couldn't find any similar research on this specific dataset, but even then, tabular classification is a classic problem that has been tackled in many different forms, from SVMs with kernels to XGBoost and Random Forest and similar ensemble models.
+
+In specific, I'll be comparing the model with XGBoost for classification.
+
 
 ### Project Design
 
-The design will be based on two main approaches. The first approach is an analysis driven approach, on which the data will be clustered and these clusters will be compared between cases that were and weren't diagnosed with Covid-19.
+The project will consist in three main steps:
 
-The second approach will be a binary classifier driven approach, where a model will be trained with 2019's data as negative and 2020's data as positive and test data. The data will have two different sets of test files, one for 2019, on which I'll test the model for precision and recall, and one for 2020, on which I'll test for how much the precision drops, and, with that, estimate the amount of unreported cases in the data.  
+- Data exploration and processing 
+  - where I'll look into the data and normalize and change categorical data into numeric, and also remove unused columns (or rarely used ones)
+- Feature engineering and dimensionality reduction
+  - where I'll search for different features and correlation between columns, to make the data more usable and representative
+- Model selection
+  - where I'll look into different model architectures and work out the best one (and the best hyperparameters)
+    - This part will contain some different model archtectures, including SVMs with kernels, pytorch fully connected models, SageMaker's linear learner and other classic classification models.
