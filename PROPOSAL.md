@@ -5,11 +5,15 @@ This project will attempt to make a classifier for under reported cases of Covid
 
 COVID-19 is the main news in 2020, but in Brazil it's been neglected by the government and has not been notified nearly enough, due to lack of tests and public investment in research and medical support.
 
+With this in mind, the project aims to support that, classifying COVID-19 patients through data.
+
 The problem is a classification problem, where a model will be trained to classify a given entry in the SRAG data between COVID-19 positive and negative sample, given the information contained in the individual file. 
 
 The problem has been tackled in a number of manners, but in other datasets. Since it's a classifier that's based on tabular and discrete data, the most promising solutions should be based on random forests and other algorithms, being the simplest ones naïve bayes and decision trees. 
 
 This problem is simple in conception, but can be complicated in terms of treating the data and processing it to a point where the features are truly meaningful.
+
+With this classifier, it would be possible to make predictions of how underreported the cases are, and also to improve the analysis of the current COVID situation in Brazil.
 
 ### Datasets and Inputs
 
