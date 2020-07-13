@@ -1,0 +1,6 @@
+# ignoring the data directory to not overload github
+data/
+
+# jupyter notebook checkpoints
+
+**/*checkpoint*
