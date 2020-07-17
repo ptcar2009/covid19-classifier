@@ -26,6 +26,14 @@ links=("https://opendatasus.saude.gov.br/dataset/18254c56-0859-4073-a6ea-977c8b8
 YEAR=("201"{4..9})
 
 for i in "${!links[@]}"; do
+    echo -e "${MESSAGE}Checking if already exists..."
+    if test -f "data/${YEAR[$i]}.csv"; then
+        current_sum=`sha256sum "data/${YEAR[$i]}.csv" | awk '{print $1}'`
+        if [ $current_sum == "${sums[$i]}" ]; then
+            echo -e "${SUCCESS}data/${YEAR[$i]}.csv already exists!"
+            continue
+        fi
+    fi
     echo -e "${MESSAGE}Downloading the ${WHITE}${YEAR[$i]} ${BLUE}data...${WHITE}"
     
     curl -Lko "data/${YEAR[$i]}.csv" "${links[$i]}"
