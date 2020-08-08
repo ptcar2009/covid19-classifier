@@ -1,0 +1,8 @@
+pandas
+numpy
+matplotlib
+plotly
+chart_studio
+boto3
+sagemaker
+jupyter
