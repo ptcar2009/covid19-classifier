@@ -18,9 +18,20 @@ These datasets contain information on patients hospitalized due to SRAG symptoms
 
 These datasets were actually very well documented and organized, containing a description for what each column meant and the actual name of the column, all well described in a [PDF file](https://opendatasus.saude.gov.br/dataset/9bc2013f-f293-4f3e-94e7-fa76204fc035/resource/20e51b77-b129-4fd5-84f6-e9428ab5e286/download/dicionario_de_dados_srag_hospitalizado_atual-sivepgripe.pdf). (all the information is in Portuguese, but it’s pretty easily translated via Google).
 
-Based on the data, I wanted to try and build a classifier for the cases (since almost half of the cases are actually unidentified). The classifier will be evaluated via four metrics, the classic scoring, F1, accuracy, precision and recall, and will be evaluated in two datasets, which are defined in [this section](#the-model).
+Based on the data, I wanted to try and build a classifier for the cases (since almost half of the cases are actually unidentified). The classifier will be evaluated via four metrics:
 
-For that, I went through a few steps, the first one of which was **The Exploration.**
+- accuracy 
+  - number of correct guesses divided by the number of samples
+- precision
+  - number of true positive guesses divided by the number of all positive guesses
+- recall
+  - number of true positive guesses divided by the number of all positive samples
+- F1
+  - the harmonic mean of the precision and recall
+
+These metrics give a good idea of the performance of the model in most situations, concerning if it needs to never predict a false positive or a false negative, and the balancing of these situations.
+
+To build the classifier, I went through a few steps, the first one of which was **The Exploration.**
 
 > ℹ️ All code is contained [in this GitHub repository](https://github.com/ptcar2009/covid19-classifier).
 
@@ -73,7 +84,6 @@ The columns that I considered useful are as follow:
 
 - SG_UF_NOT -> This column identifies the Federal Unity (or state) where the patient was registered. This is useful mostly because the social background of each Brazilian state can differ hugely, and this can affect the treatment and exposure of the patient both to COVID-19 and to better health care.
 - CS_SEXO -> This is the sex of the patient. Although COVID isn’t the most misogynistic virus, it still has some biases.
-- TP_IDADE and NU_IDADE_N -> These columns state the age of the patient.
 - CS_RACA -> This describes the ethnicity of the subject.
 - SURTO_SG, NOSOCOMIAL, FEBRE, TOSSE, GARGANTA, DISPNEIA, DESC_RESP, SATURACAO, DIARREIA, VOMITO, OUTRO_SIN -> These columns describe some basic diagnostic factors (symptoms like cough and fever, and environmental hazards, like the kind of work).
 - PUERPERA, CARDIOPATI, HEMATOLOGI, SIND_DOWN, HEPATICA, ASMA, DIABETES, NEUROLOGIC, PNEUMOPATI, RENAL, OBESIDADE -> These define risk factors.
@@ -87,9 +97,9 @@ The columns that I considered useful are as follow:
 - EVOLUCAO -> This states what was the evolution of the case if the patient died or was cured.
 - ID_MN_RESI or CO_MUN_RES -> this identifies the city where the patient resides
 
-Most of the columns already had numerical values, which saved a lot of time for me, but most of them also had a very large number of `nan`values. This was fixed by just adding the ‘skipped’ flag to these `nan` values, which was a valid flag in most of the column descriptions.
+After deciding the base columns, I did an extensive research on the distribution of the column values, through box blots, which tell us about the limits and ranges of the data, and histograms, so that we can get take a look on the distribution of the data.
 
-Some columns, though, had to have more processing time, to get rid of imperfections and to account for conditional data. This is where we get to **The Processing**.
+Most of the columns were pretty balanced between the datasets, but they also contained a lot of either ignored or not added values, which made me drop all the `nan` values in each dataset. This decreased the number of samples I had from about 500k to about 100k on each section (pre and post 2020), but it should make the model more reliable.
 
 # The Processing
 
@@ -99,7 +109,29 @@ All the processing was done in this function below:
 
 <script src="https://gist.github.com/ptcar2009/1c64be03a3710f20699269927edc89f7.js"></script>
 
-The next step was normalization and then we’d go straight for model construction.
+After processing the data, I trained some base models just to take a look at the end result, and applied the `SHAP` library to it. SHAP is a library that uses the [Shapley value](https://en.wikipedia.org/wiki/Shapley_value) and some related work, which are game theory means of obtaining some explanation behind the model's workings. The first SHAP I ran gave me this result.
+
+![](/home/ptcar/projetos/udacity-capstone/img/shap_before.jpeg)
+
+The numbers on the right of the plot represent each feature of the dataset. The feature number 27 is actually the state from which the report was taken. This clicked on me, because the distribution of the COVID cases in Brazil is not homogeneous at all, most of the cases were concentrated within the southeast region, and the hospitals and reporting are better there too.
+
+This can be seen by this distribution:
+
+<iframe width="900" height="800" frameborder="0" scrolling="no" src="//plotly.com/~ptecodev/43.embed"></iframe>
+
+It's easy to see that the number of cases in SP would cause a huge bias in the model, since the distribution of cases in the negative labels is pretty different.
+
+<iframe width="900" height="800" frameborder="0" scrolling="no" src="//plotly.com/~ptecodev/45.embed"></iframe>
+
+This caused my model to predict that everyone from SP and RJ were positive for COVID, which was a bad bias considering the objective of the model is to predict not by circumstance, but by symptoms and pre-existing conditions. This information made me take out the state from the feature set, and to take out some other features that didn't seem relevant due to the number of ignored or `nan` values.
+
+After these changes, the SHAP model I got hand very different predictive features, most of which were not seasonal at all, and seemed to be symptomatic or related to x-ray results.
+
+![](./img/shap_final.png)
+
+The feature 11 is CARDIOPATI, and it's values are pretty balanced overall, and feature 23 is the x-ray results, which seem to be pretty relevant both in statistical and medical spectrums.
+
+Finally, we go on to the construction of **The Model**.
 
 # The Model
 
@@ -126,26 +158,30 @@ Moving on, we get to the model
 
 The current state of the art for tabular classification ranges in a few algorithms, and XGBoost is one that is close to the state of the art. There are some others, like the [FastAI tabular](https://docs.fast.ai/tabular.html) algorithm, [random forests](https://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm), and others, but XGBoost is among the best, and its implementation is simple and reliable, being contained in the SageMaker default library.
 
-Considering the data had already been preprocessed, the training was made quite simple. Just upload the data to S3 and use the built-in classifier for SageMaker.
+XGBoost is an algorithm based on [gradient boosting]([https://en.wikipedia.org/wiki/Gradient_boosting#:~:text=Gradient%20boosting%20is%20a%20machine,prediction%20models%2C%20typically%20decision%20trees.](https://en.wikipedia.org/wiki/Gradient_boosting#:~:text=Gradient boosting is a machine,prediction models%2C typically decision trees.)), which is a technique based on combining several 'weak' classification models into a strong classifier, with help of gradient descent for choice of weaker models in a function focused manner. XGBoost is not the only gradient boosting algorithm, but it's the most used and most reliable, being it open source and on development and usage since 2006.
+
+There are many hyper-parameters in the XGBoost model, but the most important ones are the `eda`, which defines the rate that the trees are optimized via the gradient descent, the `max_depth` and the `subsample`, both of which define characteristics of the underlying weaker model (in this case a tree classifier), and they control most of the overfitting and complexity of the model.
+
+To optimize these hyper-parameters, I used SageMaker's hyperparameter tuning tools, which make it easy to search a diverse range of training parameters and use the best performing one.
+
+After optimizing, I used the best training job as a parameter for testing and evaluating.
 
 This model gave out some interesting results. In the training process, the model achieved incredibly good metrics, with accuracy near perfect.
 
-![Image for post](https://miro.medium.com/max/217/0*6kgAWsULp07yFKzt.png)
+![Image for post](./img/accuracy_test_full_ds.png)
 
-These metrics have unusually high values, with accuracy that made me uncomfortable, but these values were from the testing dataset, which contained never seen before data, therefore the fear of overfitting was not that great.
+These metrics had some pretty good results, considering that the data was not the best, with many unusable values and not much information overall, regarding symptoms and other conditions.
 
-Anyway, these metrics were from the testing dataset, which gave me confidence that, at least when the labels were reliable, the model was also reliable.
-
-From this point, I had built a COVID-19 classifier from SRAG data. But I wanted to test this classifier against the cases from 2020 which were classified as Unknown Causes, to see if the model was compatible with studies [from earlier this year](https://oglobo.globo.com/sociedade/coronavirus/alem-da-covid-19-brasil-tem-outras-2771-mortes-por-problemas-respiratorios-sem-explicacao-24389276) that state how many cases of COVID-19 were hidden in the unknown causes.
+From this point, I had built a COVID-19 classifier from SRAG data. But I wanted to benchmark this classifier against the cases from 2020 which were classified as Unknown Causes, to see if the model was compatible with studies [from earlier this year](https://oglobo.globo.com/sociedade/coronavirus/alem-da-covid-19-brasil-tem-outras-2771-mortes-por-problemas-respiratorios-sem-explicacao-24389276) that state how many cases of COVID-19 were hidden in the unknown causes.
 
 To do that, I first made the same processing from before in the Post 2020 positive cases, then ran the same metrics, but considering the whole data as positive, to get a grasp for how many cases my model would classify as COVID, from the unknown causes.
 
-<img src="https://miro.medium.com/max/217/0*kMDC5bGZIkwT66Ra.png?q=20" alt="Image for post" />
+![](./img/results_2020.png)
 
-From this test, I got about 30% accuracy, which was much less than the statistically expected, but still, meant that my model considered that there were about 40k more COVID cases in the dataset that the official classification.
+From this test, I got about 63% accuracy, meant that my model predicted that about 60% of the cases classified as unknown causes were actually COVID. This is a good prediction in relation to the benchmark statistical value from the article. 
 
 # Conclusion
 
-Statistically, the model was incorrect, but this effort doesn't seem meaningless. There is some information to be extracted from the data, and the classifier seems to do a good job in the labeled data, and from the unlabeled, it can at least split apart some of it.
+The model gave good predictions overall, and with some more feature manipulation and engineering, aswell as cross referencing data from other sources, like population density and hospital resources, this method seems to be promising on classifying whether or not a given case is or isn't COVID, both from the accuracy of the model itself on it's training dataset and from the Unknown Cases cases, on which the model gave results pretty similar to the statistical benchmark. 
 
 There are a bunch of other datasets regarding COVID-19 in Brazil, and they’re mostly unexplored in a machine learning environment. This project gave me the opportunity to see for myself what can be done, and I intend to keep digging and improving the models.
