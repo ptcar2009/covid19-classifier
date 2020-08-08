@@ -62,17 +62,17 @@ The first step was to consume the data into the data frames, and this was done t
 
 The first thing I did was validate the conjecture that a lot of the data was actually classified as unknown causes, and these graphics strongly point to it:
 
-<iframe width="900" height="800" frameborder="0" scrolling="no" src="//plotly.com/~ptecodev/1.embed"></iframe>
+![](./img/all_years_separate.png)
 
 The massive amount of COVID after 2020 is not a surprise here, but the massive amount of unidentified shows pretty clearly that some numbers are misrepresented in the current data.
 
-<iframe width="900" height="800" frameborder="0" scrolling="no" src="//plotly.com/~ptecodev/8.embed"></iframe>
+![](./img/all_years_bar_covid.png)
 
 As you can see, the cases in the first half of 2020 are comparable to the total number of cases from 2014 to 2019, which shows an increase that doesn’t seem likely to occur naturally.
 
 This increase in unknown causes can also be seen in a time plot of the total number in 2020.
 
-<iframe width="900" height="800" frameborder="0" scrolling="no" src="//plotly.com/~ptecodev/10.embed"></iframe>
+![](./img/2020_line_causes.png)
 
 This graph clearly shows an immense increase in cases considered unknown in a similar fashion to the ones considered COVID.
 
@@ -111,17 +111,19 @@ All the processing was done in this function below:
 
 After processing the data, I trained some base models just to take a look at the end result, and applied the `SHAP` library to it. SHAP is a library that uses the [Shapley value](https://en.wikipedia.org/wiki/Shapley_value) and some related work, which are game theory means of obtaining some explanation behind the model's workings. The first SHAP I ran gave me this result.
 
-![](/home/ptcar/projetos/udacity-capstone/img/shap_before.jpeg)
+![](./img/shap_before.jpeg)
 
 The numbers on the right of the plot represent each feature of the dataset. The feature number 27 is actually the state from which the report was taken. This clicked on me, because the distribution of the COVID cases in Brazil is not homogeneous at all, most of the cases were concentrated within the southeast region, and the hospitals and reporting are better there too.
 
 This can be seen by this distribution:
 
-<iframe width="900" height="800" frameborder="0" scrolling="no" src="//plotly.com/~ptecodev/43.embed"></iframe>
+![](./img/state_2020.png)
 
 It's easy to see that the number of cases in SP would cause a huge bias in the model, since the distribution of cases in the negative labels is pretty different.
 
-<iframe width="900" height="800" frameborder="0" scrolling="no" src="//plotly.com/~ptecodev/45.embed"></iframe>
+
+
+![](./img/all_year_by_state.png)
 
 This caused my model to predict that everyone from SP and RJ were positive for COVID, which was a bad bias considering the objective of the model is to predict not by circumstance, but by symptoms and pre-existing conditions. This information made me take out the state from the feature set, and to take out some other features that didn't seem relevant due to the number of ignored or `nan` values.
 
